@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import argparse
+import os
 import sys
 import matplotlib as mpl
 mpl.use('Agg')
@@ -101,11 +102,13 @@ def main(argv):
         ax = color_by_arg(sgal, args.xcolumn, args.ycolumn, args.ccolumn,
                           bins=args.bins, cmap=args.cmap, xlim=args.xlim,
                           ylim=args.ylim, clim=args.clim, skw=skw)
-        
-    outpref = args.infile.replace('.dat', '')
+    
+    base, name = os.path.split(args.infile)
+    outpref = name.replace('.dat', '')
     outfile ='{}_{}_{}_{}.{}'.format(outpref, args.xcolumn, args.ycolumn,
                                      cstr, args.ext)
     outfile = outfile.translate(None, '[]/')
+    outfile = os.path.join(base, outfile)
     plt.savefig(outfile)
     print 'wrote {}'.format(outfile)
 
