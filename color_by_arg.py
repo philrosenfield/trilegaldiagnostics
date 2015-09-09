@@ -7,27 +7,27 @@ def readfile(filename, col_key_line=0, comment_char='#', string_column=None,
     '''
     read a file as a np array, uses the comment char and col_key_line
     to get the name of the columns.
-    
+
     Parameters
     ----------
     filename : str
         path to file
-    
+
     col_key_line : int
         line number to find the column names (default 0)
-    
+
     comment_char : str
         character to ignore as a comment (default #)
-    
+
     string_column : int or list
         column numbers that should be read as strings (defult None)
-    
+
     string_length : int
         maximum length of column string (default 16)
-    
+
     only_keys : list
         column names to read (default all)
-        
+
     Returns
     -------
     np.array from np.genfromtxt
@@ -72,7 +72,7 @@ class StarPop(object):
         adds self.data: a np.array of the trilegal catalog
         """
         self.base, self.name = os.path.split(trilegal_catalog)
-        
+
         try:
             from astropy.table import Table
             data = Table.read(trilegal_catalog, format='ascii.commented_header',
@@ -96,6 +96,10 @@ class StarPop(object):
             data = self.data[colstr]
         return data
 
+def trilegal_stages():
+    # see parametri.h
+    return ['PMS', 'MS', 'SUBGIANT', 'RGB', 'HEB', 'RHEB', 'BHEB',
+            'EAGB', 'TPAGB', 'POSTAGB', 'WD']
 
 def color_by_arg(starpop, xdata, ydata, coldata, bins=None, cmap=None, ax=None,
                  fig=None, labelfmt='$%.3f$', xlim=None, ylim=None, clim=None,
@@ -126,7 +130,7 @@ def color_by_arg(starpop, xdata, ydata, coldata, bins=None, cmap=None, ax=None,
 
     slice_inds : list or array
         slice the data
-    
+
     Returns
     -------
     ax : plt.Axes instance
@@ -136,15 +140,19 @@ def color_by_arg(starpop, xdata, ydata, coldata, bins=None, cmap=None, ax=None,
 
     def latexify(string):
         return r'${}$'.format(string.replace('_', '\_'))
-    
+
     ax = ax or plt.gca()
 
     if type(xdata) is str:
         ax.set_xlabel(latexify(xdata))
+        if 'stage' in xdata:
+            ax.set_xticklabels(trilegal_stages())
         xdata = starpop.split_column(xdata)
 
     if type(ydata) is str:
         ax.set_ylabel(latexify(ydata))
+        if 'stage' in ydata:
+            ax.set_yticklabels(trilegal_stages())
         ydata = starpop.split_column(ydata)
 
     collabel = None
@@ -156,7 +164,7 @@ def color_by_arg(starpop, xdata, ydata, coldata, bins=None, cmap=None, ax=None,
         xdata = xdata[slice_inds]
         ydata = ydata[slice_inds]
         coldata = coldata[slice_inds]
-         
+
     if bins is not None:
         if cmap is None:
             cmap = plt.get_cmap('Spectral', bins)
@@ -168,14 +176,17 @@ def color_by_arg(starpop, xdata, ydata, coldata, bins=None, cmap=None, ax=None,
         if cmap is not None:
             cmap = plt.get_cmap(cmap)
         cmap = cmap or plt.cm.Spectral
-    
+
     l = ax.scatter(xdata, ydata, c=coldata, marker='o', s=15,
                    edgecolors='none', cmap=cmap, **skw)
 
     c = plt.colorbar(l, ax=ax)
+
     if collabel is not None:
         c.set_label(collabel)
-  
+        if 'stage' in collabel:
+            c.ax.set_yticklabels(trilegal_stages())
+
     if xlim is not None:
         ax.set_xlim(xlim)
 
@@ -185,4 +196,3 @@ def color_by_arg(starpop, xdata, ydata, coldata, bins=None, cmap=None, ax=None,
     if clim is not None:
         l.set_clim(clim)
     return ax
-
