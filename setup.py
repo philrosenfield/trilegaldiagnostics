@@ -6,7 +6,7 @@ setup(
     name='trilegaldiagnostics',
     author='Phil Rosenfield',
     author_email='philip.rosenfield@unipd.it',
-    version='0.11',
+    version='0.12',
     py_modules=['color_by_arg'],
     scripts=['color_by_arg'],
     install_requires=['numpy', 'matplotlib'],
