@@ -82,6 +82,7 @@ class StarPop(object):
         self.key_dict = dict(zip(list(data.dtype.names),
                                  range(len(list(data.dtype.names)))))
         self.data = data
+        self.stage_type = 'trilegal'
 
     def split_column(self, colstr):
         """
@@ -96,14 +97,67 @@ class StarPop(object):
             data = self.data[colstr]
         return data
 
-def trilegal_stages():
-    # see parametri.h
-    return ['PMS', 'MS', 'SUBGIANT', 'RGB', 'HEB', 'RHEB', 'BHEB',
-            'EAGB', 'TPAGB', 'POSTAGB', 'WD']
+    def tri2agb(self):
+        """
+        redefine self.data['stage']
+        from
+        ['PMS', 'MS', 'SUBGIANT', 'RGB', 'HEB', 'RHEB', 'BHEB',
+         'EAGB', 'TPAGB', 'POSTAGB', 'WD']
+        to
+        ['PMS', 'MS', 'SUBGIANT', 'RGB', 'HEB', 'EAGB', 'MSTAR', 'CSTAR',
+         'POSTAGB', 'WD']
+        """
+        if self.stages == 'agb':
+            return
+        # mask TPAGB
+        tpagbs, = np.nonzero(self.data['stage'] == 8)
+
+        # I don't believe PMS.
+        self.data['stage'][self.data['stage'] == 0] = 1
+
+        # gather all HeBs
+        self.data['stage'][self.data['stage'] == 5] = 4
+        self.data['stage'][self.data['stage'] == 6] = 4
+
+        # shift EAGB, POSTAGB, WD
+        self.data['stage'][self.data['stage'] == 7] = 5
+        self.data['stage'][self.data['stage'] == 9] = 8
+        self.data['stage'][self.data['stage'] == 10] = 9
+
+        # make MSTAR and CSTAR
+        mstars, = np.nonzero((self.data['C/O'] <= 1) &
+                             (self.data['logML'] <= -5) &
+                             (self.data['logL'] >= 3.3))
+        mstars = list(set(mstars) & set(tpagbs))
+        cstars, = np.nonzero((self.data['C/O'] >= 1) &
+                             (self.data['logML'] <= -5))
+        cstars = list(set(cstars) & set(tpagbs))
+        self.data['stage'][mstars] = 6
+        self.data['stage'][cstars] = 7
+
+        self.stage_type = 'agb'
+        return
+
+    def trilegal_stages(self):
+        # see parametri.h
+        return ['PMS', 'MS', 'SUBGIANT', 'RGB', 'HEB', 'RHEB', 'BHEB',
+                'EAGB', 'TPAGB', 'POSTAGB', 'WD']
+
+    def agb_stages(self):
+        return ['PMS', 'MS', 'SGB', 'RGB', 'HeB', 'EAGB',
+                'M-Star', 'C-Star', 'P-AGB', 'WD']
+
+    def stages(self, ):
+        if self.stage_type == 'agb':
+            s = self.agb_stages()
+        else:
+            s = self.trilegal_stages()
+        return s
+
 
 def color_by_arg(starpop, xdata, ydata, coldata, bins=None, cmap=None, ax=None,
                  fig=None, labelfmt='$%.3f$', xlim=None, ylim=None, clim=None,
-                 slice_inds=None, skw={}):
+                 slice_inds=None, colorbar=True, skw={}):
     """
     Parameters
     ----------
@@ -146,13 +200,13 @@ def color_by_arg(starpop, xdata, ydata, coldata, bins=None, cmap=None, ax=None,
     if type(xdata) is str:
         ax.set_xlabel(latexify(xdata))
         if 'stage' in xdata:
-            ax.set_xticklabels(trilegal_stages())
+            ax.set_xticklabels(starpop.stages())
         xdata = starpop.split_column(xdata)
 
     if type(ydata) is str:
         ax.set_ylabel(latexify(ydata))
         if 'stage' in ydata:
-            ax.set_yticklabels(trilegal_stages())
+            ax.set_yticklabels(starpop.stages())
         ydata = starpop.split_column(ydata)
 
     collabel = None
@@ -180,12 +234,16 @@ def color_by_arg(starpop, xdata, ydata, coldata, bins=None, cmap=None, ax=None,
     l = ax.scatter(xdata, ydata, c=coldata, marker='o', s=15,
                    edgecolors='none', cmap=cmap, **skw)
 
-    c = plt.colorbar(l, ax=ax)
+    if colorbar:
+        c = plt.colorbar(l, ax=ax)
 
-    if collabel is not None:
-        c.set_label(collabel)
-        if 'stage' in collabel:
-            c.ax.set_yticklabels(trilegal_stages())
+        if collabel is not None:
+            c.set_label(collabel)
+            if 'stage' in collabel:
+                c.ax.set_yticklabels(starpop.stages())
+
+        if clim is not None:
+            l.set_clim(clim)
 
     if xlim is not None:
         ax.set_xlim(xlim)
@@ -193,6 +251,4 @@ def color_by_arg(starpop, xdata, ydata, coldata, bins=None, cmap=None, ax=None,
     if ylim is not None:
         ax.set_ylim(ylim)
 
-    if clim is not None:
-        l.set_clim(clim)
     return ax

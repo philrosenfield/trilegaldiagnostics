@@ -38,6 +38,9 @@ def main(argv):
     parser.add_argument('-f', '--overwrite', action='store_true',
                         help='overwrite if image exists')
 
+    parser.add_argument('-g', '--agb', action='store_true',
+                        help='use agb stages (with stage a some column)')
+
     parser.add_argument('infile', type=str, help='TRILEGAL file')
 
     parser.add_argument('xcolumn', type=str, help='x axis column')
@@ -77,6 +80,8 @@ def main(argv):
         skw={'vmin': vlims[0], 'vmax': vlims[1]}
 
     sgal = StarPop(args.infile)
+    if args.agb:
+        _ = sgal.tri2agb()
 
     if args.multiplot is True:
         zdict = {'stage': [(0, 9), 10, (1, 8)],
